@@ -1,0 +1,26 @@
+---
+# file: playbook.yaml
+- name: Install Vault on Ubuntu
+  hosts: all
+  become: yes  # Use sudo to install packages
+  tasks:
+    - name: Update apt gpg
+      apt:
+        update_cache: yes
+        pkg:
+          - gpg
+    
+    - name: Install the public key for the repo
+      shell:
+        cmd: wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+    - name: Create the repository configuration file
+      shell:
+        cmd: echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+    - name: Install Vault
+      apt:
+        update_cache: yes
+        name:
+          - vault
+        state: present
