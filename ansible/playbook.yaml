@@ -12,7 +12,7 @@
     
     - name: Install the public key for the repo
       shell:
-        cmd: wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+        cmd: wget -O- https://apt.releases.hashicorp.com/gpg | gpg --yes --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
 
     - name: Create the repository configuration file
       shell:
@@ -24,3 +24,39 @@
         name:
           - vault
         state: present
+
+    - name: Create vault service
+      shell:
+        cmd: |
+          tee /lib/systemd/system/vault.service <<EOF
+          [Unit]
+          Description="HashiCorp Vault"
+          Documentation="https://developer.hashicorp.com/vault/docs"
+          ConditionFileNotEmpty="/etc/vault.d/vault.hcl"
+
+          [Service]
+          User=vault
+          Group=vault
+          SecureBits=keep-caps
+          AmbientCapabilities=CAP_IPC_LOCK
+          CapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK
+          NoNewPrivileges=yes
+          ExecStart=vault server -config=/etc/vault.d/vault.hcl
+          ExecReload=/bin/kill --signal HUP
+          KillMode=process
+          KillSignal=SIGINT
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+    - name: Copy config.hcl
+      ansible.builtin.copy:
+        src: ./files/config.hcl
+        dest: /etc/vault.d/vault.hcl
+        
+    - name: Make sure vault service unit is running
+      ansible.builtin.systemd_service:
+        state: started
+        name: vault
+        daemon_reload: true

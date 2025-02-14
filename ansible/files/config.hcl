@@ -1,10 +1,10 @@
 storage "raft" {
-  path    = "./vault/data"
+  path    = "/opt/vault/data"
   node_id = "node1"
 }
 
 listener "tcp" {
-  address     = "http://0.0.0.0:8200"
+  address     = "0.0.0.0:8200"
   tls_disable = "true"
 }
 

@@ -28,4 +28,13 @@ terraform state pull > terraform.tfstate
 ### View terraform state
 terraform show -json
 
+Start Vault Server
+vault server -config config.hcl
+
+Stop Vault Server
+pkill -9 vault
+
+Run vault as service
+https://developer.hashicorp.com/vault/docs/run-as-service
+
 https://github.com/elasticdog/transcrypt
