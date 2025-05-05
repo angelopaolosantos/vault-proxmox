@@ -60,3 +60,4 @@
         state: started
         name: vault
         daemon_reload: true
+        enabled: true
