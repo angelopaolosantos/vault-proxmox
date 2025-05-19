@@ -30,6 +30,11 @@ ansible-playbook -i ./ansible/inventory.yaml ./ansible/playbook.yaml
 ### View terraform state
 `terraform show -json`
 
+## Initialize
+Go to https://vault.deviantlab.duckdns.org/ to initialize vault
+
+enter Initial Root Token to login
+
 ## Manual Start and Stop Vault server
 ### Start Vault Server
 `vault server -config config.hcl`
