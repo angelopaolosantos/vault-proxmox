@@ -102,7 +102,7 @@
         module: copy
         dest: ./vault_init.json
         content: "{{ vault_init.stdout }}"
-        mode: '0600'
+        mode: '0666'
 
 
   handlers:
