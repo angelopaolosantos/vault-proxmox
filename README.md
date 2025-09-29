@@ -9,8 +9,9 @@ It also supports **AWS KMS auto-unseal**, so Vault can start automatically witho
 ## ⚡ Quick Start
 
 ```bash
-# 1. Install transcrypt and decrypt files
-transcrypt
+# 1. Install transcrypt and decrypt backend config
+transcrypt init
+# (decrypt config.pg.tfbackend)
 
 # 2. Provision LXC container with Terraform
 terraform init --backend-config=config.pg.tfbackend
@@ -23,48 +24,88 @@ ansible-galaxy collection install cloud.terraform
 export ANSIBLE_HOST_KEY_CHECKING=False
 ansible-playbook -i ./ansible/inventory.yaml ./ansible/playbook.yaml -K
 
+# 5. SSH into the container (update IP if needed)
+ssh -o UserKnownHostsFile=/dev/null \
+    -o StrictHostKeyChecking=no \
+    -i .ssh/my-private-key.pem \
+    root@192.168.254.217
 ```
-terraform init --backend-config=config.pg.tfbackend 
+
+---
+
+## 📦 Provision the LXC Container with Terraform
+
+Before initializing Terraform, install **[transcrypt](https://github.com/elasticdog/transcrypt)** to decrypt `config.pg.tfbackend`.  
+
+```bash
+terraform init --backend-config=config.pg.tfbackend
 terraform plan
 terraform apply
 ```
 
-## Run Ansible to install Vault
-### Install Terraform Collection for Ansible
-`ansible-galaxy collection install cloud.terraform`
+---
 
-### Print Terraform Inventory
-`ansible-inventory -i ./ansible/inventory.yaml --graph --vars`
+## ⚙️ Install and Configure Vault with Ansible
 
-### Run Ansible Playbook
+### 1. Install Terraform Collection for Ansible
+```bash
+ansible-galaxy collection install cloud.terraform
 ```
+
+### 2. Print Terraform Inventory
+```bash
+ansible-inventory -i ./ansible/inventory.yaml --graph --vars
+```
+
+### 3. Run the Ansible Playbook
+```bash
 export ANSIBLE_HOST_KEY_CHECKING=False
-ansible-playbook -i ./ansible/inventory.yaml ./ansible/playbook.yaml
+ansible-playbook -i ./ansible/inventory.yaml ./ansible/playbook.yaml -K
 ```
 
-### SSH into container
-`ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .ssh/my-private-key.pem root@192.168.254.217`
+---
 
-### Download terraform state from backend
-`terraform state pull > terraform.tfstate`
+## 🔑 Accessing the Container
 
-### View terraform state
-`terraform show -json`
+```bash
+ssh -o UserKnownHostsFile=/dev/null \
+    -o StrictHostKeyChecking=no \
+    -i .ssh/my-private-key.pem \
+    root@192.168.254.217
+```
 
-## Initialize
-Go to https://vault.deviantlab.duckdns.org/ to initialize vault
+---
 
-enter Initial Root Token to login
+## 🔐 AWS KMS Auto-Unseal with IAM Policies
 
-## Manual Start and Stop Vault server
-### Start Vault Server
-`vault server -config config.hcl`
+Vault can automatically unseal itself using **AWS KMS**, eliminating manual unseal keys.  
 
-### Stop Vault Server
-`pkill -9 vault`
+---
 
-### Run vault as service
-https://developer.hashicorp.com/vault/docs/run-as-service
+### 1️⃣ Diagram: Vault + AWS KMS Auto-Unseal
+
+```
+┌─────────────┐          ┌───────────────┐
+│ Vault LXC   │          │ AWS KMS Key   │
+│ Server      │          │ (CMK)         │
+│             │          │               │
+│  vault      │ ───────► │  Decrypt      │
+│  server     │          │  unseal key   │
+└─────────────┘          └───────────────┘
+       ▲
+       │
+       │ IAM Role/Policy grants access
+       │
+       └───────────────
+```
+
+**Flow:**  
+1. Vault starts inside Proxmox LXC.  
+2. Vault contacts AWS KMS using the IAM role attached to the instance.  
+3. KMS decrypts the unseal key.  
+4. Vault automatically unseals without manual intervention.  
+
+---
 
 ### 2️⃣ Create a KMS Key in AWS
 
@@ -113,14 +154,14 @@ seal "awskms" {
 - Vault will now auto-unseal on startup.  
 
 ---
-## 🔑 Accessing the Container
+
+### 5️⃣ Start Vault
 
 ```bash
-ssh -o UserKnownHostsFile=/dev/null \
-    -o StrictHostKeyChecking=no \
-    -i .ssh/my-private-key.pem \
-    root@192.168.254.217
+vault server -config config.hcl
 ```
+
+Vault automatically unseals via AWS KMS.
 
 ---
 
@@ -145,8 +186,6 @@ vault server -config config.hcl
 ### Stop Vault
 ```bash
 pkill -9 vault
-# or
-systemctl stop vault
 ```
 
 ### Run Vault as a Service
@@ -172,6 +211,4 @@ terraform destroy
 - [Terraform](https://www.terraform.io/)  
 - [Ansible](https://www.ansible.com/)  
 - [elasticdog/transcrypt](https://github.com/elasticdog/transcrypt)  
-- [AWS KMS Auto-Unseal Docs](https://developer.hashicorp.com/vault/docs/configuration/seal/awskms)  
-
-https://github.com/elasticdog/transcrypt
+- [AWS KMS Auto-Unseal Docs](https://developer.hashicorp.com/vault/docs/configuration/seal/awskms)

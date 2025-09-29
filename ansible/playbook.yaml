@@ -97,13 +97,13 @@
       environment:
         VAULT_ADDR: http://127.0.0.1:8200
 
-    - name: Save Vault init JSON locally
-      local_action:
-        module: copy
-        dest: ./vault_init.json
+    - name: Copy Vault init with owner and permissions
+      ansible.builtin.copy:
         content: "{{ vault_init.stdout }}"
-        mode: '0666'
-
+        mode: '0644'
+        dest: "{{ playbook_dir }}/output_{{ inventory_hostname }}.json"
+        force: yes
+      delegate_to: localhost
 
   handlers:
         - name: Restart Vault

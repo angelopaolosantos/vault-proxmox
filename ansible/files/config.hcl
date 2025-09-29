@@ -1,15 +1,9 @@
-storage "raft" {
-  path    = "/opt/vault/data"
-  node_id = "node1"
-}
-
-listener "tcp" {
-  address     = "0.0.0.0:8200"
-  tls_disable = "true"
-}
-
-disable_mlock = true
-
-api_addr = "http://127.0.0.1:8200"
-cluster_addr = "https://127.0.0.1:8201"
-ui = true
+U2FsdGVkX18cEgD9AO+ivD3MkrX0gETQac8ytAWPirwIzSQBAY4DptN6g6KTQ+vB
+HbsfoDycJQAM/y37GY8Dk+DqqqiiOiUPwXEqMC2TIuYFiPTVA78+6r0j24X4gfAf
+IQ9g9t8FUYcta7+hgIOA7kbIGBKMpDmnngdbcms7PASzDQ2oPAr9t4NFtEIsBecL
+UID3uCXgZ/ExSUyt3CewVWa/KM4S8kilt0TL5fisoruucQHTCXeC0xcIEzIOZfdy
+e2jjqCGErb8BKnmmox1uHl77lFvQWzBmNgDuRDSaR3sAHF1vM97kyKml0akMfuDB
+fE3L8AN4osN6Kolj5OTaJuyvFduQ3PDO7+jPanv3utrhwfBFUwOQfxqSf64iJnmW
+A1hy+uqIj7M4C0fp74you1Y2/GH66QMxw6OpQS/nI5zCWmQ+IgntAxEgC7TkSOzs
+xSQE7Rbub6KWTv69y/aNv+PSnash9N0IFXfn/2eCi1hyKrWmATZDx+RxbVU69CDT
+y4lVD+amgWC7H/BUR0od5sEk/Gr3gcx1nBSN0VuNp08=
