@@ -1,30 +1,35 @@
 ---
-# file: playbook.yaml
+
 - name: Install Vault on Ubuntu
-  hosts: all
-  become: yes  # Use sudo to install packages
+  hosts: vault
+  become: true  # Use sudo to install packages
+
+  vars_files:
+    - ./vault_vars.yaml
+    - ./tf_ansible_vars_file.yaml
+
   tasks:
     - name: Update apt gpg
       apt:
         update_cache: yes
         pkg:
           - gpg
-    
     - name: Install the public key for the repo
       shell:
         cmd: wget -O- https://apt.releases.hashicorp.com/gpg | gpg --yes --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-
     - name: Create the repository configuration file
       shell:
         cmd: echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-
     - name: Install Vault
       apt:
         update_cache: yes
         name:
           - vault
         state: present
-
+    - name: Copy config.hcl
+      ansible.builtin.copy:
+        src: ./files/config.hcl
+        dest: /etc/vault.d/vault.hcl
     - name: Create vault service
       shell:
         cmd: |
@@ -50,14 +55,60 @@
           WantedBy=multi-user.target
           EOF
 
-    - name: Copy config.hcl
-      ansible.builtin.copy:
-        src: ./files/config.hcl
-        dest: /etc/vault.d/vault.hcl
-        
+    - name: Ensure systemd drop-in directory exists
+      file:
+        path: /etc/systemd/system/vault.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create Vault AWS environment file
+      copy:
+        dest: "{{ aws_env_file }}"
+        owner: root
+        group: root
+        mode: "0600"
+        content: |
+          AWS_ACCESS_KEY_ID={{ aws_access_key }}
+          AWS_SECRET_ACCESS_KEY={{ aws_secret_key }}
+          AWS_REGION={{ aws_region }}
+    - name: Create systemd override for Vault
+      copy:
+        dest: /etc/systemd/system/vault.service.d/override.conf
+        content: |
+          [Service]
+          EnvironmentFile={{ aws_env_file }}
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart Vault        
     - name: Make sure vault service unit is running
       ansible.builtin.systemd_service:
-        state: started
         name: vault
+        state: started
+        enabled: yes
         daemon_reload: true
-        enabled: true
+
+    - name: Initialize Vault
+      command: vault operator init -format=json
+      register: vault_init
+      changed_when: "'unseal_keys_b64' in vault_init.stdout"
+      environment:
+        VAULT_ADDR: http://127.0.0.1:8200
+
+    - name: Save Vault init JSON locally
+      local_action:
+        module: copy
+        dest: ./vault_init.json
+        content: "{{ vault_init.stdout }}"
+        mode: '0600'
+
+
+  handlers:
+        - name: Restart Vault
+          systemd:
+            name: vault
+            state: restarted
+            enabled: yes
+            daemon-reload: yes
